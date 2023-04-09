@@ -23,7 +23,7 @@ namespace dxvk {
      * \brief SPIR-V Op code
      * \returns The op code
      */
-    spv::Op opCode() const {
+    inline spv::Op opCode() const {
       return static_cast<spv::Op>(
         this->arg(0) & spv::OpCodeMask);
     }
@@ -32,7 +32,7 @@ namespace dxvk {
      * \brief Instruction length
      * \returns Number of DWORDs
      */
-    uint32_t length() const {
+    inline uint32_t length() const {
       return this->arg(0) >> spv::WordCountShift;
     }
     
@@ -40,7 +40,7 @@ namespace dxvk {
      * \brief Instruction offset
      * \returns Offset in DWORDs
      */
-    uint32_t offset() const {
+    inline uint32_t offset() const {
       return m_offset;
     }
     
@@ -54,7 +54,7 @@ namespace dxvk {
      * \param [in] idx Argument index, starting at 1
      * \returns The argument value
      */
-    uint32_t arg(uint32_t idx) const {
+    inline uint32_t arg(uint32_t idx) const {
       const uint32_t index = m_offset + idx;
       return index < m_length ? m_code[index] : 0;
     }
@@ -80,6 +80,17 @@ namespace dxvk {
     void setArg(uint32_t idx, uint32_t word) const {
       if (m_offset + idx < m_length)
         m_code[m_offset + idx] = word;
+    }
+
+    /**
+     * \brief Changes the value of an argument
+     *
+     * \param [in] idx Argument index, starting at 1
+     * \param [in] word The value to add to the argument
+     */
+    void incrementArg(uint32_t idx, uint32_t word) const {
+        if (m_offset + idx < m_length)
+            m_code[m_offset + idx] += word;
     }
     
   private:

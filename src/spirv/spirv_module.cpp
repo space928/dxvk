@@ -37,7 +37,6 @@ namespace dxvk {
     return m_id++;
   }
   
-  
   bool SpirvModule::hasCapability(
           spv::Capability         capability) {
     for (auto ins : m_capabilities) {

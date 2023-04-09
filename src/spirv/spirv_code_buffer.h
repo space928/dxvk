@@ -88,6 +88,11 @@ namespace dxvk {
      * \returns The new SPIR-V ID
      */
     uint32_t allocId();
+
+    /**
+    * \brief Gets maximum ID count stored in the header
+    */
+    uint32_t getBoundsId() const;
     
     /**
      * \brief Merges two code buffers

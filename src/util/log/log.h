@@ -33,12 +33,12 @@ namespace dxvk {
     Logger(const std::string& file_name);
     ~Logger();
     
-    static void trace(const std::string& message);
-    static void debug(const std::string& message);
-    static void info (const std::string& message);
-    static void warn (const std::string& message);
-    static void err  (const std::string& message);
-    static void log  (LogLevel level, const std::string& message);
+    static void trace(const std::string& message, ...);
+    static void debug(const std::string& message, ...);
+    static void info (const std::string& message, ...);
+    static void warn (const std::string& message, ...);
+    static void err  (const std::string& message, ...);
+    static void log  (LogLevel level, const std::string& message, ...);
     
     static LogLevel logLevel() {
       return s_instance.m_minLevel;
@@ -57,7 +57,7 @@ namespace dxvk {
     bool              m_initialized = false;
     PFN_wineLogOutput m_wineLogOutput = nullptr;
 
-    void emitMsg(LogLevel level, const std::string& message);
+    void emitMsg(LogLevel level, const std::string& message, ...);
     
     std::string getFileName(
       const std::string& base);

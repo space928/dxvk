@@ -77,6 +77,9 @@ if platform == 'windows'
   lib_d3d11   = cpp.find_library('d3d11')
   lib_dxgi    = cpp.find_library('dxgi')
 
+  libdir = meson.current_source_dir() + './include/glslang/lib'
+  lib_glslang = cpp.find_library('glslang', dirs: libdir, required: true)
+
   if dxvk_is_msvc
     lib_d3dcompiler_47 = cpp.find_library('d3dcompiler')
   else

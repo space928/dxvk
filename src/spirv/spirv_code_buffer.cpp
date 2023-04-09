@@ -49,6 +49,15 @@ namespace dxvk {
     return m_code[BoundIdsOffset]++;
   }
 
+  uint32_t SpirvCodeBuffer::getBoundsId() const {
+      constexpr size_t BoundIdsOffset = 3;
+
+      if (m_code.size() <= BoundIdsOffset)
+          return 0;
+
+      return m_code[BoundIdsOffset];
+  }
+
 
   void SpirvCodeBuffer::append(const SpirvCodeBuffer& other) {
     if (other.size() != 0) {

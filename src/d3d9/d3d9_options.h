@@ -158,6 +158,13 @@ namespace dxvk {
 
     /// Shader dump path
     std::string shaderDumpPath;
+
+    /// Whether to use a custom override shader to emulate fixed function pipelines
+    bool overrideFFShaders;
+
+    /// Path to the custom fixed function override shader (The file extension is added
+    /// automatically, *.frag for the pixel shader and *.vert for the vertex shader)
+    std::string overrideFFShaderPath;
   };
 
 }
