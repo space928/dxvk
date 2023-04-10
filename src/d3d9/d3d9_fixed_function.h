@@ -50,6 +50,8 @@ namespace dxvk {
 
     bool invariantPosition;
     bool forceSampleRateShading;
+    bool overrideFFShaders;
+    std::string overrideFFShaderPath;
   };
 
   // Returns new oFog if VS
@@ -229,7 +231,7 @@ namespace dxvk {
     Rc<DxvkShader> m_shader;
 
     DxsoIsgn       m_isgn;
-
+    D3D9FixedFunctionOptions* m_d3d9Options;
   };
 
 
@@ -244,6 +246,16 @@ namespace dxvk {
     D3D9FFShader GetShaderModule(
             D3D9DeviceEx*         pDevice,
       const D3D9FFShaderKeyFS&    ShaderKey);
+
+    void ClearVSShaders()
+    {
+        m_vsModules.clear();
+    }
+
+    void ClearFSShaders()
+    {
+        m_fsModules.clear();
+    }
 
   private:
 

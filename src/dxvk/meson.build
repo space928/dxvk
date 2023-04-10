@@ -141,7 +141,7 @@ endif
 
 dxvk_lib = static_library('dxvk', dxvk_src, glsl_generator.process(dxvk_shaders), dxvk_version,
   link_with           : [ util_lib, spirv_lib, wsi_lib ],
-  dependencies        : [ vkcommon_dep, lib_glslang ] + dxvk_extra_deps,
+  dependencies        : [ vkcommon_dep ] + dxvk_extra_deps + dxvk_glslang_libs,
   include_directories : [ dxvk_include_path ],
 )
 

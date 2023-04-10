@@ -83,8 +83,11 @@ namespace dxvk {
             std::cerr << adjusted;
         }
 
-        if (m_fileStream)
+        if (m_fileStream) {
           m_fileStream << adjusted;
+          // Obviously this can be a bit slow but it avoids missing crash messages...
+          m_fileStream.flush();
+        }
       }
     }
   }

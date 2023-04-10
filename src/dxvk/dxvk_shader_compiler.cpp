@@ -8,10 +8,17 @@
 #include <glslang/include/glslang/Public/ShaderLang.h>
 #include <glslang/include/glslang/Public/ResourceLimits.h>
 #include <glslang/include/glslang/SPIRV/doc.h>
+#include <dxvk_dummy_frag.h>
 
 namespace dxvk {
-	std::vector<uint32_t> compileShaderToSPIRV_Vulkan(glslang_stage_t stage, const char* shaderSource, const char* fileName)
+	std::vector<uint32_t> compileShaderToSPIRV_Vulkan(glslang_stage_t stage, const char* shaderSource, const char* fileName, const std::vector<std::string> shaderVariantDefines)
 	{
+		std::string shaderSourceProc;
+		for (auto& define : shaderVariantDefines)
+			shaderSourceProc.append("#define " + define + "\n");
+
+		shaderSourceProc.append(shaderSource);
+
 		const glslang_input_t input = {
 			.language = GLSLANG_SOURCE_GLSL,
 			.stage = stage,
@@ -19,7 +26,7 @@ namespace dxvk {
 			.client_version = GLSLANG_TARGET_VULKAN_1_2,
 			.target_language = GLSLANG_TARGET_SPV,
 			.target_language_version = GLSLANG_TARGET_SPV_1_5,
-			.code = shaderSource,
+			.code = shaderSource, //TODO: Replace with proc
 			.default_version = 100,
 			.default_profile = GLSLANG_NO_PROFILE,
 			.force_default_version_and_profile = false,
@@ -31,33 +38,33 @@ namespace dxvk {
 		glslang_shader_t* shader = glslang_shader_create(&input);
 
 		if (!glslang_shader_preprocess(shader, &input)) {
-			Logger::err("GLSL preprocessing failed %s\n", fileName);
-			Logger::err("%s\n", glslang_shader_get_info_log(shader));
-			Logger::err("%s\n", glslang_shader_get_info_debug_log(shader));
-			Logger::err("%s\n", input.code);
+			Logger::err(str::format("GLSL preprocessing failed %s\n", fileName));
+			Logger::err(str::format("%s\n", glslang_shader_get_info_log(shader)));
+			Logger::err(str::format("%s\n", glslang_shader_get_info_debug_log(shader)));
+			Logger::err(str::format("%s\n", input.code));
 			glslang_shader_delete(shader);
-			return std::vector<uint32_t>();
+			return std::vector<uint32_t>(std::begin(dxvk_dummy_frag), std::end(dxvk_dummy_frag));
 		}
 
 		if (!glslang_shader_parse(shader, &input)) {
-			Logger::err("GLSL parsing failed %s\n", fileName);
-			Logger::err("%s\n", glslang_shader_get_info_log(shader));
-			Logger::err("%s\n", glslang_shader_get_info_debug_log(shader));
-			Logger::err("%s\n", glslang_shader_get_preprocessed_code(shader));
+			Logger::err(str::format("GLSL parsing failed %s\n", fileName));
+			Logger::err(str::format("%s\n", glslang_shader_get_info_log(shader)));
+			Logger::err(str::format("%s\n", glslang_shader_get_info_debug_log(shader)));
+			Logger::err(str::format("%s\n", glslang_shader_get_preprocessed_code(shader)));
 			glslang_shader_delete(shader);
-			return std::vector<uint32_t>();
+			return std::vector<uint32_t>(std::begin(dxvk_dummy_frag), std::end(dxvk_dummy_frag));
 		}
 
 		glslang_program_t* program = glslang_program_create();
 		glslang_program_add_shader(program, shader);
 
 		if (!glslang_program_link(program, GLSLANG_MSG_SPV_RULES_BIT | GLSLANG_MSG_VULKAN_RULES_BIT)) {
-			Logger::err("GLSL linking failed %s\n", fileName);
-			Logger::err("%s\n", glslang_program_get_info_log(program));
-			Logger::err("%s\n", glslang_program_get_info_debug_log(program));
+			Logger::err(str::format("GLSL linking failed %s\n", fileName));
+			Logger::err(str::format("%s\n", glslang_program_get_info_log(program)));
+			Logger::err(str::format("%s\n", glslang_program_get_info_debug_log(program)));
 			glslang_program_delete(program);
 			glslang_shader_delete(shader);
-			return std::vector<uint32_t>();
+			return std::vector<uint32_t>(std::begin(dxvk_dummy_frag), std::end(dxvk_dummy_frag));
 		}
 
 		glslang_program_SPIRV_generate(program, stage);
@@ -67,7 +74,7 @@ namespace dxvk {
 
 		const char* spirv_messages = glslang_program_SPIRV_get_messages(program);
 		if (spirv_messages)
-			Logger::err("(%s) %s\b", fileName, spirv_messages);
+			Logger::err(str::format("(%s) %s\b", fileName, spirv_messages));
 
 		glslang_program_delete(program);
 		glslang_shader_delete(shader);
@@ -89,16 +96,16 @@ namespace dxvk {
 		int nInstructionsToLink = src.getBoundsId();
 
 		// Find the function we want to link
-		const char* targetFunctionName = "ffOverrideMain(vf4;vf3;vf3;";
+		//const char* targetFunctionName = "ffOverrideMain(vf4;vf3;vf3;";
 		const char* dummyFunctionName = "main";
-		int dummyFunctionId = -1;
+		uint32_t dummyFunctionId = -1;
 		// Cache each segment of the bytecode to link so we can filter it more easily later
 		SpirvInstruction** debugInstructions = new SpirvInstruction * [nInstructionsToLink];
 		SpirvInstruction** annotationInstructions = new SpirvInstruction * [nInstructionsToLink];
 		SpirvInstruction** typeVarConstInstructions = new SpirvInstruction * [nInstructionsToLink];
 		std::vector<SpirvInstruction*> functionInstructions;
 
-		int currentFunctionId = -1;
+		uint32_t currentFunctionId = -1;
 		for (auto inst : src)
 		{
 			// We can rely on the fact that the debug information we are relying on here is always at the start of the bytecode
@@ -136,10 +143,9 @@ namespace dxvk {
 			case spv::OpGroupMemberDecorate:
 			case spv::OpDecorateId:
 			case spv::OpDecorateString:
-			case spv::OpDecorateStringGOOGLE:
 			case spv::OpMemberDecorateString:
-			case spv::OpMemberDecorateStringGOOGLE:
 				annotationInstructions[inst.arg(1)] = &inst;
+				break;
 
 				// Type/Const/Var Instructions
 			case spv::OpTypeArray:
@@ -173,7 +179,7 @@ namespace dxvk {
 			case spv::OpConstantSampler:
 			case spv::OpConstantTrue:
 			case spv::OpVariable:
-				typeConstVarInstructions[inst.arg(1)] = &inst;
+				typeVarConstInstructions[inst.arg(1)] = &inst;
 				break;
 
 				// Function instructions
@@ -210,7 +216,7 @@ namespace dxvk {
 					inst->incrementArg(2, linkStartId);
 			}
 
-			uint32_t opCode = inst->opCode();
+			//uint32_t opCode = inst->opCode();
 			for (int i = 0; i < opDesc.operands.getNum(); i++)
 			{
 				/*// This is modified from https://github.com/KhronosGroup/glslang/blob/main/SPIRV/SPVRemapper.cpp
@@ -291,5 +297,7 @@ namespace dxvk {
 				dst.appendInstruction(inst);
 			}
 		}
+
+		return false;
 	}
 }

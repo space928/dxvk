@@ -1,0 +1,224 @@
+#version 450
+#extension GL_EXT_demote_to_helper_invocation : require
+
+layout(constant_id = 12) const uint _29 = 0u;
+layout(constant_id = 1) const uint _36 = 0u;
+layout(constant_id = 2) const uint _195 = 0u;
+
+layout(set = 1, binding = 2, std140) uniform spec_state_t
+{
+    uint dword0;
+    uint dword1;
+    uint dword2;
+    uint dword3;
+    uint dword4;
+    uint dword5;
+    uint dword6;
+    uint dword7;
+    uint dword8;
+    uint dword9;
+    uint dword10;
+    uint dword11;
+    uint dword12;
+    uint dword13;
+} spec_state;
+
+layout(set = 1, binding = 0, std140) uniform D3D9FixedFunctionPS
+{
+    vec4 textureFactor;
+} consts;
+
+layout(set = 1, binding = 1, std140) uniform D3D9SharedPS
+{
+    vec4 _m0;
+    vec2 _m1;
+    vec2 _m2;
+    float _m3;
+    float _m4;
+    vec4 _m5;
+    vec2 _m6;
+    vec2 _m7;
+    float _m8;
+    float _m9;
+    vec4 _m10;
+    vec2 _m11;
+    vec2 _m12;
+    float _m13;
+    float _m14;
+    vec4 _m15;
+    vec2 _m16;
+    vec2 _m17;
+    float _m18;
+    float _m19;
+    vec4 _m20;
+    vec2 _m21;
+    vec2 _m22;
+    float _m23;
+    float _m24;
+    vec4 _m25;
+    vec2 _m26;
+    vec2 _m27;
+    float _m28;
+    float _m29;
+    vec4 _m30;
+    vec2 _m31;
+    vec2 _m32;
+    float _m33;
+    float _m34;
+    vec4 _m35;
+    vec2 _m36;
+    vec2 _m37;
+    float _m38;
+    float _m39;
+} D3D9SharedPS_1;
+
+layout(push_constant, std430) uniform render_state_t
+{
+    vec3 fog_color;
+    float fog_scale;
+    float fog_end;
+    float fog_density;
+    uint alpha_ref;
+} render_state;
+
+layout(set = 0, binding = 0) uniform sampler2D s0;
+layout(set = 0, binding = 1) uniform sampler2D s1;
+layout(set = 0, binding = 2) uniform sampler2D s2;
+layout(set = 0, binding = 3) uniform sampler2D s3;
+layout(set = 0, binding = 4) uniform sampler2D s4;
+layout(set = 0, binding = 5) uniform sampler2D s5;
+layout(set = 0, binding = 6) uniform sampler2D s6;
+layout(set = 0, binding = 7) uniform sampler2D s7;
+
+layout(location = 1) in vec4 in_Texcoord0;
+layout(location = 2) in vec4 in_Texcoord1;
+layout(location = 3) in vec4 in_Texcoord2;
+layout(location = 4) in vec4 in_Texcoord3;
+layout(location = 5) in vec4 in_Texcoord4;
+layout(location = 6) in vec4 in_Texcoord5;
+layout(location = 7) in vec4 in_Texcoord6;
+layout(location = 8) in vec4 in_Texcoord7;
+layout(location = 9) in vec4 in_Color0;
+layout(location = 10) in vec4 in_Color1;
+layout(location = 11) in float in_Fog0;
+layout(location = 0) out vec4 out_Color0;
+vec4 _157;
+
+void main()
+{
+    vec4 _26 = vec4(gl_PointCoord, 0.0, 0.0);
+    bvec4 _45 = bvec4(bitfieldExtract(bitfieldExtract((_29 != 0u) ? _36 : spec_state.dword1, 23, 2), 1, 1) == 1u);
+    vec4 _108 = texture(s0, mix(in_Texcoord0, _26, _45).xy);
+    vec4 _109 = vec4(in_Color0.x, in_Color0.y, in_Color0.z, _108.w);
+    vec4 _112 = texture(s1, mix(in_Texcoord1, _26, _45).xy);
+    vec4 _113 = _109 * _112;
+    vec4 _114 = vec4(_113.x, _113.y, _113.z, _109.w);
+    vec4 _115 = vec4(_114.x, _114.y, _114.z, _109.w);
+    vec4 _118 = texture(s2, mix(in_Texcoord2, _26, _45).xy);
+    vec4 _119 = _115 * _118;
+    vec4 _120 = vec4(_119.x, _119.y, _119.z, _115.w);
+    vec4 _121 = vec4(_120.x, _120.y, _120.z, _115.w);
+    vec4 _124 = texture(s3, mix(in_Texcoord3, _26, _45).xy);
+    vec4 _128 = vec4(_121.x, _121.y, _121.z, _124.w) + (in_Color1 * vec4(1.0, 1.0, 1.0, 0.0));
+    _157 = _128;
+    if (bitfieldExtract((_29 != 0u) ? _36 : spec_state.dword1, 29, 1) != 0u)
+    {
+        float _161 = gl_FragCoord.z * (1.0 / gl_FragCoord.w);
+        float _177;
+        switch (bitfieldExtract((_29 != 0u) ? _36 : spec_state.dword1, 27, 2))
+        {
+            case 1u:
+            {
+                _177 = exp(-(_161 * render_state.fog_density));
+                break;
+            }
+            case 2u:
+            {
+                float _170 = _161 * render_state.fog_density;
+                _177 = exp(-(_170 * _170));
+                break;
+            }
+            case 3u:
+            {
+                float _175 = (render_state.fog_end - _161) * render_state.fog_scale;
+                float _250 = isnan(0.0) ? _175 : (isnan(_175) ? 0.0 : max(_175, 0.0));
+                _177 = isnan(1.0) ? _250 : (isnan(_250) ? 1.0 : min(_250, 1.0));
+                break;
+            }
+            default:
+            {
+                _177 = in_Fog0;
+                break;
+            }
+        }
+        vec3 _180 = mix(render_state.fog_color, _128.xyz, vec3(_177));
+        _157 = vec4(_180.x, _180.y, _180.z, _128.w);
+    }
+    out_Color0 = _157;
+    uint _191 = bitfieldExtract((_29 != 0u) ? _36 : spec_state.dword1, 20, 3);
+    uint _199 = bitfieldExtract((_29 != 0u) ? _195 : spec_state.dword2, 26, 4);
+    if (_191 != 7u)
+    {
+        float _238;
+        float _239;
+        if (_199 <= 8u)
+        {
+            _238 = float((render_state.alpha_ref << _199) | (render_state.alpha_ref >> (8u - _199)));
+            _239 = roundEven(out_Color0.w * float((256u << _199) - 1u));
+        }
+        else
+        {
+            _238 = float(render_state.alpha_ref) / 255.0;
+            _239 = out_Color0.w;
+        }
+        bool _248;
+        switch (_191)
+        {
+            case 0u:
+            {
+                _248 = false;
+                break;
+            }
+            case 1u:
+            {
+                _248 = _239 < _238;
+                break;
+            }
+            case 2u:
+            {
+                _248 = _239 == _238;
+                break;
+            }
+            case 3u:
+            {
+                _248 = _239 <= _238;
+                break;
+            }
+            case 4u:
+            {
+                _248 = _239 > _238;
+                break;
+            }
+            case 5u:
+            {
+                _248 = _239 != _238;
+                break;
+            }
+            case 6u:
+            {
+                _248 = _239 >= _238;
+                break;
+            }
+            default:
+            {
+                _248 = true;
+                break;
+            }
+        }
+        if (!_248)
+        {
+            demote;
+        }
+    }
+}
+

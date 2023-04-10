@@ -162,6 +162,9 @@ namespace dxvk {
     /// Whether to use a custom override shader to emulate fixed function pipelines
     bool overrideFFShaders;
 
+    /// Whether to automatically reload and recompile shaders from disk when modified
+    bool autoReloadOverrideShaders;
+
     /// Path to the custom fixed function override shader (The file extension is added
     /// automatically, *.frag for the pixel shader and *.vert for the vertex shader)
     std::string overrideFFShaderPath;

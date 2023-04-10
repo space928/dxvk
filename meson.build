@@ -1,4 +1,4 @@
-project('dxvk', ['c', 'cpp'], version : 'v2.1', meson_version : '>= 0.49', default_options : [ 'cpp_std=c++17', 'warning_level=2' ])
+project('dxvk', ['c', 'cpp'], version : 'v2.1', meson_version : '>= 0.49', default_options : [ 'cpp_std=c++20', 'warning_level=2' ])
 
 cpu_family = target_machine.cpu_family()
 platform   = target_machine.system()
@@ -54,14 +54,15 @@ if platform == 'windows'
     '-static-libstdc++',
     # We need to set the section alignment for debug symbols to
     # work properly as well as avoiding a memcpy from the Wine loader.
-    '-Wl,--file-alignment=4096',
+    # '-Wl,--file-alignment=4096',
   ]
 
   # Wine's built-in back traces only work with dwarf2 symbols
   if get_option('debug')
     compiler_args += [
-      '-gstrict-dwarf',
-      '-gdwarf-2',
+      # '-gstrict-dwarf',
+      # '-gdwarf-2',
+      '-g', # Actually I want to debug on Windows...
     ]
   endif
 
@@ -77,8 +78,19 @@ if platform == 'windows'
   lib_d3d11   = cpp.find_library('d3d11')
   lib_dxgi    = cpp.find_library('dxgi')
 
-  libdir = meson.current_source_dir() + './include/glslang/lib'
-  lib_glslang = cpp.find_library('glslang', dirs: libdir, required: true)
+  
+  libdir = meson.current_source_dir() / 'include/glslang/lib'
+  lib_glslang = cpp.find_library('glslangd', dirs: libdir, required: true)
+  lib_glslang_res_limits = cpp.find_library('glslang-default-resource-limitsd', dirs: libdir, required: true)
+  lib_SPIRV = cpp.find_library('SPIRVd', dirs: libdir, required: true)
+  lib_MachineIndependent = cpp.find_library('MachineIndependentd', dirs: libdir, required: true)
+  lib_GenericCodeGen = cpp.find_library('GenericCodeGend', dirs: libdir, required: true)
+  lib_HLSL = cpp.find_library('HLSLd', dirs: libdir, required: true)
+  lib_OGLCompiler = cpp.find_library('OGLCompilerd', dirs: libdir, required: true)
+  lib_OSDependent = cpp.find_library('OSDependentd', dirs: libdir, required: true)
+  lib_SPVRemapper = cpp.find_library('SPVRemapperd', dirs: libdir, required: true)
+
+  dxvk_glslang_libs = [ lib_glslang, lib_glslang_res_limits, lib_SPIRV, lib_MachineIndependent, lib_GenericCodeGen, lib_HLSL, lib_OGLCompiler, lib_OSDependent, lib_SPVRemapper ]
 
   if dxvk_is_msvc
     lib_d3dcompiler_47 = cpp.find_library('d3dcompiler')

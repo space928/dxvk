@@ -1,0 +1,67 @@
+#version 450
+#extension GL_EXT_demote_to_helper_invocation : require
+
+struct render_state_t {
+    vec3  fog_color   = vec3(0.);
+    float fog_scale   = 0.0;
+    float fog_end     = 1.0;
+    float fog_density = 1.0;
+
+    uint  alpha_ref = 0u;
+
+    float point_size     = 1.0;
+    float point_size_min = 1.0;
+    float point_size_max = 64.0;
+    float point_scale_a  = 1.0;
+    float point_scale_b  = 0.0;
+    float point_scale_c  = 0.0;
+};
+
+struct spec_state_t {
+    uint dword0;
+    uint dword1;
+    uint dword2;
+    uint dword3;
+    uint dword4;
+    uint dword5;
+    uint dword6;
+    uint dword7;
+    uint dword8;
+    uint dword9;
+    uint dword10;
+    uint dword11;
+    uint dword12;
+    uint dword13;
+};
+
+struct D3D9FFPixelData {
+    uint constantBuffer;
+    uint sharedState;
+
+    struct {
+      uint textureFactor;
+    } constants;
+
+    struct {
+      uint TEXCOORD[8];
+      uint COLOR[2];
+      uint FOG;
+      uint POS;
+    } in;
+
+    struct {
+      uint texcoordCnt;
+      uint typeId;
+      uint varId;
+    } samplers[8];
+
+    struct {
+      uint COLOR;
+    } out;
+};
+
+void main()
+{
+	vec4 pointCoord = vec4(gl_PointCoord, 0.0, 0.0);
+
+}

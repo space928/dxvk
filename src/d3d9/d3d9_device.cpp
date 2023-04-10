@@ -55,7 +55,8 @@ namespace dxvk {
     , m_isSWVP          ( (BehaviorFlags & D3DCREATE_SOFTWARE_VERTEXPROCESSING) ? true : false )
     , m_csThread        ( dxvkDevice, dxvkDevice->createContext(DxvkContextType::Primary) )
     , m_csChunk         ( AllocCsChunk() )
-    , m_d3d9Interop     ( this ) {
+    , m_d3d9Interop     ( this )
+    /*, m_fileWatcher(nullptr)*/ {
     // If we can SWVP, then we use an extended constant set
     // as SWVP has many more slots available than HWVP.
     bool canSWVP = CanSWVP();
@@ -63,6 +64,28 @@ namespace dxvk {
 
     if (canSWVP)
       Logger::info("D3D9DeviceEx: Using extended constant set for software vertex processing.");
+
+    // Setup file watcher for automatic shader reloading
+    /*if (m_d3d9Options.autoReloadOverrideShaders)
+    {
+        m_fileWatcher = new FileWatcher(m_d3d9Options.overrideFFShaderPath, std::chrono::milliseconds(1000));
+        //m_fileWatcher.delay = 1000;
+        //m_fileWatcher.path_to_watch = m_d3d9Options.overrideFFShaderPath;
+        m_fileWatcherThread = std::thread([this]() {m_fileWatcher->start([this](std::string path_to_watch, FileStatus status) -> void {
+            // Process only regular files, all other file types are ignored
+            if (!std::filesystem::is_regular_file(std::filesystem::path(path_to_watch)) && status != FileStatus::erased) {
+                return;
+            }
+
+            if (status == FileStatus::modified) {
+                Logger::warn("FF override shader has been modified! Reloading shaders...");
+                // Race condition? Maybe we should add a lock...
+                m_ffModules.ClearFSShaders();
+
+                m_flags.set(D3D9DeviceFlag::DirtyFFPixelShader);
+            }
+        }); });
+    }*/
 
     if (m_dxvkDevice->instance()->extensions().extDebugUtils)
       m_annotation = new D3D9UserDefinedAnnotation(this);
@@ -6918,6 +6941,19 @@ namespace dxvk {
 
       D3D9FixedFunctionPS* data = reinterpret_cast<D3D9FixedFunctionPS*>(mapPtr);
       DecodeD3DCOLOR((D3DCOLOR)rs[D3DRS_TEXTUREFACTOR], data->textureFactor.data);
+      // Lets pass in some extra data, what's the worst that could happen...
+      DecodeD3DCOLOR(m_state.renderStates[D3DRS_AMBIENT], data->GlobalAmbient.data);
+
+      uint32_t lightIdx = 0;
+      for (uint32_t i = 0; i < caps::MaxEnabledLights; i++) {
+          auto idx = m_state.enabledLightIndices[i];
+          if (idx == UINT32_MAX)
+              continue;
+
+          data->Lights[lightIdx++] = D3D9Light(m_state.lights[idx].value(), m_state.transforms[GetTransformIndex(D3DTS_VIEW)]);
+      }
+
+      data->Material = m_state.material;
     }
   }
 

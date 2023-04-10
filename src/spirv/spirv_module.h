@@ -77,9 +77,9 @@ namespace dxvk {
       m_code.putWord(word);
     }
 
-    void appendInstruction(SpirvInstruction& inst) {
-        for (int i = 0; i < inst.length(); i++)
-            m_code.putWord(inst.arg(i));
+    void appendInstruction(SpirvInstruction* inst) {
+        for (uint32_t i = 0; i < inst->length(); i++)
+            m_code.putWord(inst->arg(i));
     }
     
     uint32_t getBlockId() const {

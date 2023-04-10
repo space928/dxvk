@@ -12,6 +12,7 @@
 #include "d3d9_constant_buffer.h"
 #include "d3d9_constant_set.h"
 #include "d3d9_mem.h"
+#include "d3d9_file_watcher.h"
 
 #include "d3d9_state.h"
 
@@ -1161,6 +1162,9 @@ namespace dxvk {
     void UnmapTextures();
 
     uint64_t GetCurrentSequenceNumber();
+
+    /*FileWatcher* m_fileWatcher;
+    std::thread m_fileWatcherThread;*/
 
     Com<D3D9InterfaceEx>            m_parent;
     D3DDEVTYPE                      m_deviceType;

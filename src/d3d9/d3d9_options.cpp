@@ -75,6 +75,7 @@ namespace dxvk {
     this->seamlessCubes                 = config.getOption<bool>        ("d3d9.seamlessCubes",                 false);
     this->textureMemory                 = config.getOption<int32_t>     ("d3d9.textureMemory",                 100) << 20;
     this->overrideFFShaders             = config.getOption<bool>        ("d3d9.overrideFFShaders",             false);
+    this->autoReloadOverrideShaders     = config.getOption<bool>        ("d3d9.autoReloadOverrideShaders",     false);
     this->overrideFFShaderPath          = config.getOption<std::string> ("d3d9.overrideFFShaderPath",          "d3dFFOverrideShader");
 
     std::string floatEmulation = Config::toLower(config.getOption<std::string>("d3d9.floatEmulation", "auto"));

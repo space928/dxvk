@@ -5,5 +5,8 @@
 #include "../spirv/spirv_module.h"
 
 namespace dxvk {
-	std::vector<uint32_t> compileShaderToSPIRV_Vulkan(glslang_stage_t stage, const char* shaderSource, const char* fileName);
+	/**
+	* \brief Compiles a GLSL shader into SPIR-V bytecode.
+	*/
+	std::vector<uint32_t> compileShaderToSPIRV_Vulkan(glslang_stage_t stage, const char* shaderSource, const char* fileName, const std::vector<std::string> shaderVariantDefines);
 }

@@ -5,6 +5,8 @@
 
 #include "d3d9_annotation.h"
 
+#include <glslang/include/glslang/Public/ShaderLang.h>
+
 class D3DFE_PROCESSVERTICES;
 using PSGPERRORID = UINT;
 
@@ -17,6 +19,8 @@ namespace dxvk {
           IDirect3D9Ex** ppDirect3D9Ex) {
     if (!ppDirect3D9Ex)
       return D3DERR_INVALIDCALL;
+
+    ShInitialize();
 
     *ppDirect3D9Ex = ref(new D3D9InterfaceEx( Extended ));
     return D3D_OK;

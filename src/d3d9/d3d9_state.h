@@ -139,6 +139,9 @@ namespace dxvk {
 
   struct D3D9FixedFunctionPS {
     Vector4 textureFactor;
+    Vector4 GlobalAmbient;
+    std::array<D3D9Light, caps::MaxEnabledLights> Lights;
+    D3DMATERIAL9 Material;
   };
 
   enum D3D9SharedPSStages {
