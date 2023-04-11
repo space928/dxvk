@@ -14,10 +14,33 @@ namespace dxvk {
 	std::vector<uint32_t> compileShaderToSPIRV_Vulkan(glslang_stage_t stage, const char* shaderSource, const char* fileName, const std::vector<std::string> shaderVariantDefines)
 	{
 		std::string shaderSourceProc;
-		for (auto& define : shaderVariantDefines)
-			shaderSourceProc.append("#define " + define + "\n");
 
-		shaderSourceProc.append(shaderSource);
+		std::stringstream ss(shaderSource);
+		std::string line;
+
+		if (shaderSource != NULL) {
+			bool foundVersion = false;
+			bool doneInserting = false;
+			while (std::getline(ss, line, '\n')) {
+				if (!doneInserting) {
+					if (line.find("#version", 0) != -1 || line.find("#extension") != -1) {
+						foundVersion = true;
+					}
+					else {
+						if (foundVersion) {
+							foundVersion = false;
+
+							// Now we can append our defines
+							for (auto& define : shaderVariantDefines)
+								shaderSourceProc.append(str::format("#define ", define, '\n'));
+
+							doneInserting = true;
+						}
+					}
+				}
+				shaderSourceProc.append(line + '\n');
+			}
+		}
 
 		const glslang_input_t input = {
 			.language = GLSLANG_SOURCE_GLSL,
@@ -26,7 +49,7 @@ namespace dxvk {
 			.client_version = GLSLANG_TARGET_VULKAN_1_2,
 			.target_language = GLSLANG_TARGET_SPV,
 			.target_language_version = GLSLANG_TARGET_SPV_1_5,
-			.code = shaderSource, //TODO: Replace with proc
+			.code = shaderSourceProc.c_str(),
 			.default_version = 100,
 			.default_profile = GLSLANG_NO_PROFILE,
 			.force_default_version_and_profile = false,
@@ -38,19 +61,19 @@ namespace dxvk {
 		glslang_shader_t* shader = glslang_shader_create(&input);
 
 		if (!glslang_shader_preprocess(shader, &input)) {
-			Logger::err(str::format("GLSL preprocessing failed %s\n", fileName));
-			Logger::err(str::format("%s\n", glslang_shader_get_info_log(shader)));
-			Logger::err(str::format("%s\n", glslang_shader_get_info_debug_log(shader)));
-			Logger::err(str::format("%s\n", input.code));
+			Logger::err(str::format("GLSL preprocessing failed: ", fileName));
+			Logger::err(glslang_shader_get_info_log(shader));
+			Logger::err(glslang_shader_get_info_debug_log(shader));
+			Logger::err(input.code);
 			glslang_shader_delete(shader);
 			return std::vector<uint32_t>(std::begin(dxvk_dummy_frag), std::end(dxvk_dummy_frag));
 		}
 
 		if (!glslang_shader_parse(shader, &input)) {
-			Logger::err(str::format("GLSL parsing failed %s\n", fileName));
-			Logger::err(str::format("%s\n", glslang_shader_get_info_log(shader)));
-			Logger::err(str::format("%s\n", glslang_shader_get_info_debug_log(shader)));
-			Logger::err(str::format("%s\n", glslang_shader_get_preprocessed_code(shader)));
+			Logger::err(str::format("GLSL parsing failed: ", fileName));
+			Logger::err(glslang_shader_get_info_log(shader));
+			Logger::err(glslang_shader_get_info_debug_log(shader));
+			Logger::err(glslang_shader_get_preprocessed_code(shader));
 			glslang_shader_delete(shader);
 			return std::vector<uint32_t>(std::begin(dxvk_dummy_frag), std::end(dxvk_dummy_frag));
 		}
@@ -59,9 +82,9 @@ namespace dxvk {
 		glslang_program_add_shader(program, shader);
 
 		if (!glslang_program_link(program, GLSLANG_MSG_SPV_RULES_BIT | GLSLANG_MSG_VULKAN_RULES_BIT)) {
-			Logger::err(str::format("GLSL linking failed %s\n", fileName));
-			Logger::err(str::format("%s\n", glslang_program_get_info_log(program)));
-			Logger::err(str::format("%s\n", glslang_program_get_info_debug_log(program)));
+			Logger::err(str::format("GLSL linking failed: ", fileName));
+			Logger::err(glslang_program_get_info_log(program));
+			Logger::err(glslang_program_get_info_debug_log(program));
 			glslang_program_delete(program);
 			glslang_shader_delete(shader);
 			return std::vector<uint32_t>(std::begin(dxvk_dummy_frag), std::end(dxvk_dummy_frag));
@@ -74,7 +97,7 @@ namespace dxvk {
 
 		const char* spirv_messages = glslang_program_SPIRV_get_messages(program);
 		if (spirv_messages)
-			Logger::err(str::format("(%s) %s\b", fileName, spirv_messages));
+			Logger::err(str::format("(", fileName, ") ", spirv_messages, "\b"));
 
 		glslang_program_delete(program);
 		glslang_shader_delete(shader);

@@ -1,4 +1,5 @@
 #include "d3d9_format.h"
+#include "d3d9_names.h"
 
 namespace dxvk {
 
@@ -225,6 +226,59 @@ namespace dxvk {
 
       ENUM_DEFAULT(e);
     }
+  }
+
+  const char* D3DTEXTUREOP_ToString(const D3DTEXTUREOP op)
+  {
+      switch (op)
+      {
+      case D3DTOP_DISABLE: return "D3DTOP_DISABLE";
+      case D3DTOP_SELECTARG1: return "D3DTOP_SELECTARG1";
+      case D3DTOP_SELECTARG2: return "D3DTOP_SELECTARG2";
+      case D3DTOP_MODULATE: return "D3DTOP_MODULATE";
+      case D3DTOP_MODULATE2X: return "D3DTOP_MODULATE2X";
+      case D3DTOP_MODULATE4X: return "D3DTOP_MODULATE4X";
+      case D3DTOP_ADD: return "D3DTOP_ADD";
+      case D3DTOP_ADDSIGNED: return "D3DTOP_ADDSIGNED";
+      case D3DTOP_ADDSIGNED2X: return "D3DTOP_ADDSIGNED2X";
+      case D3DTOP_SUBTRACT: return "D3DTOP_SUBTRACT";
+      case D3DTOP_ADDSMOOTH: return "D3DTOP_ADDSMOOTH";
+      case D3DTOP_BLENDDIFFUSEALPHA: return "D3DTOP_BLENDDIFFUSEALPHA";
+      case D3DTOP_BLENDTEXTUREALPHA: return "D3DTOP_BLENDTEXTUREALPHA";
+      case D3DTOP_BLENDFACTORALPHA: return "D3DTOP_BLENDFACTORALPHA";
+      case D3DTOP_BLENDTEXTUREALPHAPM: return "D3DTOP_BLENDTEXTUREALPHAPM";
+      case D3DTOP_BLENDCURRENTALPHA: return "D3DTOP_BLENDCURRENTALPHA";
+      case D3DTOP_PREMODULATE: return "D3DTOP_PREMODULATE";
+      case D3DTOP_MODULATEALPHA_ADDCOLOR: return "D3DTOP_MODULATEALPHA_ADDCOLOR";
+      case D3DTOP_MODULATECOLOR_ADDALPHA: return "D3DTOP_MODULATECOLOR_ADDALPHA";
+      case D3DTOP_MODULATEINVALPHA_ADDCOLOR: return "D3DTOP_MODULATEINVALPHA_ADDCOLOR";
+      case D3DTOP_MODULATEINVCOLOR_ADDALPHA: return "D3DTOP_MODULATEINVCOLOR_ADDALPHA";
+      case D3DTOP_BUMPENVMAP: return "D3DTOP_BUMPENVMAP";
+      case D3DTOP_BUMPENVMAPLUMINANCE: return "D3DTOP_BUMPENVMAPLUMINANCE";
+      case D3DTOP_DOTPRODUCT3: return "D3DTOP_DOTPRODUCT3";
+      case D3DTOP_MULTIPLYADD: return "D3DTOP_MULTIPLYADD";
+      case D3DTOP_LERP: return "D3DTOP_LERP";
+      case D3DTOP_FORCE_DWORD: return "D3DTOP_FORCE_DWORD";
+      default: return "D3DTOP_DISABLE";
+      }
+  }
+
+  const char* D3DTEXTUREARGUMENT_ToString(const int op)
+  {
+      switch (op)
+      {
+      case D3DTA_SELECTMASK:          return "D3DTA_SELECTMASK";
+      case D3DTA_DIFFUSE:             return "D3DTA_DIFFUSE";
+      case D3DTA_CURRENT:             return "D3DTA_CURRENT";
+      case D3DTA_TEXTURE:             return "D3DTA_TEXTURE";
+      case D3DTA_TFACTOR:             return "D3DTA_TFACTOR";
+      case D3DTA_SPECULAR:            return "D3DTA_SPECULAR";
+      case D3DTA_TEMP:           return "D3DTA_TEMP";
+      case D3DTA_CONSTANT:        return "D3DTA_CONSTANT";
+      case D3DTA_COMPLEMENT:      return "D3DTA_COMPLEMENT";
+      case D3DTA_ALPHAREPLICATE:  return "D3DTA_ALPHAREPLICATE";
+      default: return "D3DTA_SELECTMASK";
+      }
   }
 
 }

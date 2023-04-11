@@ -1163,8 +1163,8 @@ namespace dxvk {
 
     uint64_t GetCurrentSequenceNumber();
 
-    /*FileWatcher* m_fileWatcher;
-    std::thread m_fileWatcherThread;*/
+    FileWatcher* m_fileWatcher;
+    std::thread m_fileWatcherThread;
 
     Com<D3D9InterfaceEx>            m_parent;
     D3DDEVTYPE                      m_deviceType;

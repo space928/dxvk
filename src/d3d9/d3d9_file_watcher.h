@@ -18,9 +18,10 @@ public:
 
     // Keep a record of files from the base directory and their last modification time
     FileWatcher(std::string path_to_watch, std::chrono::duration<int, std::milli> delay) : path_to_watch{ path_to_watch }, delay{ delay } {
-        for (auto& file : std::filesystem::recursive_directory_iterator(path_to_watch)) {
+        paths_[path_to_watch] = std::filesystem::last_write_time(path_to_watch);
+        /*for (auto& file : std::filesystem::recursive_directory_iterator(path_to_watch)) {
             paths_[file.path().string()] = std::filesystem::last_write_time(file);
-        }
+        }*/
     }
 
     // Monitor "path_to_watch" for changes and in case of a change execute the user supplied "action" function

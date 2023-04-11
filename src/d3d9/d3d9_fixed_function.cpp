@@ -3,6 +3,7 @@
 #include "d3d9_device.h"
 #include "d3d9_util.h"
 #include "d3d9_spec_constants.h"
+#include "d3d9_names.h"
 
 #include "../dxvk/dxvk_hash.h"
 #include "../dxvk/dxvk_shader_compiler.h"
@@ -18,6 +19,7 @@ namespace dxvk {
 		forceSampleRateShading = options->forceSampleRateShading;
 		overrideFFShaders = options->overrideFFShaders;
 		overrideFFShaderPath = options->overrideFFShaderPath;
+		overrideFFShaderFilter = options->overrideFFShaderFilter;
 	}
 
 	uint32_t DoFixedFunctionFog(D3D9ShaderSpecConstantManager& spec, SpirvModule& spvModule, const D3D9FogContext& fogCtx) {
@@ -2526,16 +2528,34 @@ namespace dxvk {
 				break;
 			}
 
-			const uint32_t bindingId = computeResourceSlotId(DxsoProgramType::PixelShader,
+			const uint32_t bindingIdSampler = computeResourceSlotId(DxsoProgramType::PixelShader,
 				DxsoBindingType::Image, i);
 
 			// Store descriptor info for the shader interface
-			DxvkBindingInfo binding = { VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER };
-			binding.resourceBinding = bindingId;
-			binding.viewType = viewType;
-			binding.access = VK_ACCESS_SHADER_READ_BIT;
-			bindings.push_back(binding);
+			DxvkBindingInfo bindingSampler = { VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER };
+			bindingSampler.resourceBinding = bindingIdSampler;
+			bindingSampler.viewType = viewType;
+			bindingSampler.access = VK_ACCESS_SHADER_READ_BIT;
+			bindings.push_back(bindingSampler);
 		}
+
+		const uint32_t bindingIdSharedConsts = computeResourceSlotId(
+			DxsoProgramType::PixelShader, DxsoBindingType::ConstantBuffer,
+			PSShared);
+
+		DxvkBindingInfo bindingSharedConsts = { VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER };
+		bindingSharedConsts.resourceBinding = bindingIdSharedConsts;
+		bindingSharedConsts.viewType = VK_IMAGE_VIEW_TYPE_MAX_ENUM;
+		bindingSharedConsts.access = VK_ACCESS_UNIFORM_READ_BIT;
+		bindingSharedConsts.uboSet = VK_TRUE;
+		bindings.push_back(bindingSharedConsts);
+
+		DxvkBindingInfo bindingStateConsts = { VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER };
+		bindingStateConsts.resourceBinding = getSpecConstantBufferSlot();
+		bindingStateConsts.viewType = VK_IMAGE_VIEW_TYPE_MAX_ENUM;
+		bindingStateConsts.access = VK_ACCESS_UNIFORM_READ_BIT;
+		bindingStateConsts.uboSet = VK_TRUE;
+		bindings.push_back(bindingStateConsts);
 
 		return bindings;
 	}
@@ -2604,7 +2624,7 @@ namespace dxvk {
 
 		m_d3d9Options = new D3D9FixedFunctionOptions(pDevice->GetOptions());
 
-		if (m_d3d9Options->overrideFFShaders) {
+		if (m_d3d9Options->overrideFFShaders && (!m_d3d9Options->overrideFFShaderFilter) || Key.Stages[0].Contents.GlobalLightingEnable) {
 			Logger::debug("Starting to compile override FF shader...");
 			auto shaderContents = get_file_contents(m_d3d9Options->overrideFFShaderPath.c_str());
 			Logger::debug("Read shader file successfully!");
@@ -2612,12 +2632,40 @@ namespace dxvk {
 			std::vector<std::string> shaderDefines;
 			shaderDefines.push_back("DX9FF_OVERRIDE_SHADER");
 			shaderDefines.push_back("PIXEL_SHADER");
-			// shaderDefines.push_back(str::format("PIXEL_SHADER"));
+			if (Key.Stages[0].Contents.GlobalLightingEnable != 0)
+				shaderDefines.push_back("LIGHTING_ENABLE");
+			if (Key.Stages[0].Contents.GlobalSpecularEnable != 0)
+				shaderDefines.push_back("SPECULAR_ENABLE");
+			if (Key.Stages[0].Contents.GlobalAlphaTestEnable != 0)
+				shaderDefines.push_back("ALPHA_TEST");
+
+			for (int i = 0; i < caps::TextureStageCount; i++)
+			{
+				D3D9FFShaderStage stage = Key.Stages[i];
+
+				if (stage.Contents.TextureBound == 1) 
+				{
+					shaderDefines.push_back(str::format("TEXTURE_STAGE_", i, "_BOUND"));
+
+					shaderDefines.push_back(str::format("TEXTURE_STAGE_", i, "_ALPHA_OP_", D3DTEXTUREOP_ToString((D3DTEXTUREOP)stage.Contents.AlphaOp)));
+					shaderDefines.push_back(str::format("TEXTURE_STAGE_", i, "_ALPHA_ARG0_", D3DTEXTUREARGUMENT_ToString(stage.Contents.AlphaArg0)));
+					shaderDefines.push_back(str::format("TEXTURE_STAGE_", i, "_ALPHA_ARG1_", D3DTEXTUREARGUMENT_ToString(stage.Contents.AlphaArg1)));
+					shaderDefines.push_back(str::format("TEXTURE_STAGE_", i, "_ALPHA_ARG2_", D3DTEXTUREARGUMENT_ToString(stage.Contents.AlphaArg2)));
+
+					shaderDefines.push_back(str::format("TEXTURE_STAGE_", i, "_COLOR_OP_", D3DTEXTUREOP_ToString((D3DTEXTUREOP)stage.Contents.ColorOp)));
+					shaderDefines.push_back(str::format("TEXTURE_STAGE_", i, "_COLOR_ARG0_", D3DTEXTUREARGUMENT_ToString(stage.Contents.ColorArg0)));
+					shaderDefines.push_back(str::format("TEXTURE_STAGE_", i, "_COLOR_ARG1_", D3DTEXTUREARGUMENT_ToString(stage.Contents.ColorArg1)));
+					shaderDefines.push_back(str::format("TEXTURE_STAGE_", i, "_COLOR_ARG2_", D3DTEXTUREARGUMENT_ToString(stage.Contents.ColorArg2)));
+				}
+			}
 
 			Logger::debug("Compiling shader...");
+			Logger::debug("  With defines: ");
+			for (auto& def : shaderDefines)
+				Logger::debug("    " + def);
 			auto spv = dxvk::compileShaderToSPIRV_Vulkan(GLSLANG_STAGE_FRAGMENT, shaderContents.c_str(), m_d3d9Options->overrideFFShaderPath.c_str(), shaderDefines);
 
-			Logger::info(str::format("Successfully compiled FF override shader with hash: %s", hash.toString()));
+			Logger::info(str::format("Successfully compiled FF override shader with hash: ", hash.toString()));
 
 			auto bindings = generateOverrideShaderBindings(Key);
 

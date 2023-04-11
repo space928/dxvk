@@ -56,7 +56,7 @@ namespace dxvk {
     , m_csThread        ( dxvkDevice, dxvkDevice->createContext(DxvkContextType::Primary) )
     , m_csChunk         ( AllocCsChunk() )
     , m_d3d9Interop     ( this )
-    /*, m_fileWatcher(nullptr)*/ {
+    , m_fileWatcher(nullptr) {
     // If we can SWVP, then we use an extended constant set
     // as SWVP has many more slots available than HWVP.
     bool canSWVP = CanSWVP();
@@ -66,7 +66,7 @@ namespace dxvk {
       Logger::info("D3D9DeviceEx: Using extended constant set for software vertex processing.");
 
     // Setup file watcher for automatic shader reloading
-    /*if (m_d3d9Options.autoReloadOverrideShaders)
+    if (m_d3d9Options.autoReloadOverrideShaders)
     {
         m_fileWatcher = new FileWatcher(m_d3d9Options.overrideFFShaderPath, std::chrono::milliseconds(1000));
         //m_fileWatcher.delay = 1000;
@@ -85,7 +85,7 @@ namespace dxvk {
                 m_flags.set(D3D9DeviceFlag::DirtyFFPixelShader);
             }
         }); });
-    }*/
+    }
 
     if (m_dxvkDevice->instance()->extensions().extDebugUtils)
       m_annotation = new D3D9UserDefinedAnnotation(this);
@@ -6916,6 +6916,8 @@ namespace dxvk {
       }
 
       stage0.GlobalSpecularEnable = m_state.renderStates[D3DRS_SPECULARENABLE];
+      stage0.GlobalLightingEnable = m_state.renderStates[D3DRS_LIGHTING];
+      stage0.GlobalAlphaTestEnable = m_state.renderStates[D3DRS_ALPHATESTENABLE];// | (m_state.renderStates[D3DRS_ALPHAFUNC] - D3DCMPFUNC::D3DCMP_ALWAYS);
 
       // The last stage *always* writes to current.
       if (idx >= 1)

@@ -52,6 +52,7 @@ namespace dxvk {
     bool forceSampleRateShading;
     bool overrideFFShaders;
     std::string overrideFFShaderPath;
+    bool overrideFFShaderFilter;
   };
 
   // Returns new oFog if VS
@@ -171,6 +172,8 @@ namespace dxvk {
         // Included in here, read from Stage 0 for packing reasons
         // Affects all stages.
         uint32_t     GlobalSpecularEnable : 1;
+        uint32_t     GlobalLightingEnable : 1;
+        uint32_t     GlobalAlphaTestEnable : 1;
       } Contents;
 
       uint32_t Primitive[2];

@@ -4,6 +4,8 @@
 #include "d3d9_caps.h"
 #include "d3d9_device.h"
 
+#include <glslang/include/glslang/Public/ShaderLang.h>
+
 #include "../util/util_singleton.h"
 
 #include <algorithm>
@@ -17,6 +19,10 @@ namespace dxvk {
     , m_extended    ( bExtended ) 
     , m_d3d9Options ( nullptr, m_instance->config() )
     , m_d3d9Interop ( this ) {
+
+    // Make sure the shader compiler is initialised
+    ShInitialize();
+
     // D3D9 doesn't enumerate adapters like physical adapters...
     // only as connected displays.
 
@@ -69,6 +75,8 @@ namespace dxvk {
 
 
   D3D9InterfaceEx::~D3D9InterfaceEx() {
+    // Release the shader compiler
+    ShFinalize();
     g_dxvkInstance.release();
   }
 

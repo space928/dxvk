@@ -168,6 +168,10 @@ namespace dxvk {
     /// Path to the custom fixed function override shader (The file extension is added
     /// automatically, *.frag for the pixel shader and *.vert for the vertex shader)
     std::string overrideFFShaderPath;
+
+    /// Whether to filter which fixxed function shaders to override. When set to true, 
+    /// fixed function shaders that don't require lighting will not be overridden.
+    bool overrideFFShaderFilter;
   };
 
 }

@@ -77,6 +77,7 @@ namespace dxvk {
     this->overrideFFShaders             = config.getOption<bool>        ("d3d9.overrideFFShaders",             false);
     this->autoReloadOverrideShaders     = config.getOption<bool>        ("d3d9.autoReloadOverrideShaders",     false);
     this->overrideFFShaderPath          = config.getOption<std::string> ("d3d9.overrideFFShaderPath",          "d3dFFOverrideShader");
+    this->overrideFFShaderFilter        = config.getOption<bool>        ("d3d9.overrideFFShaderFilter",        true);
 
     std::string floatEmulation = Config::toLower(config.getOption<std::string>("d3d9.floatEmulation", "auto"));
     if (floatEmulation == "strict") {
