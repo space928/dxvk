@@ -687,6 +687,7 @@ namespace dxvk {
 			uint32_t POSITION;
 			uint32_t POINTSIZE;
 			uint32_t NORMAL;
+			uint32_t VIEW;
 			uint32_t TEXCOORD[8];
 			uint32_t COLOR[2];
 			uint32_t FOG;
@@ -1263,6 +1264,8 @@ namespace dxvk {
 				position = m_module.opVectorShuffle(m_vec3Type, position, position, 3, indices.data());
 				direction = m_module.opVectorShuffle(m_vec3Type, direction, direction, 3, indices.data());
 
+				m_module.opStore(m_vs.out.VIEW, vtx3);
+
 				uint32_t delta = m_module.opFSub(m_vec3Type, position, vtx3);
 				uint32_t d = m_module.opLength(m_floatType, delta);
 				uint32_t hitDir = m_module.opFNegate(m_vec3Type, direction);
@@ -1727,6 +1730,8 @@ namespace dxvk {
 		m_vs.out.POSITION = declareIO(false, DxsoSemantic{ DxsoUsage::Position, 0 }, spv::BuiltInPosition);
 		if (m_options.invariantPosition)
 			m_module.decorate(m_vs.out.POSITION, spv::DecorationInvariant);
+
+		m_vs.out.VIEW = declareIO(false, DxsoSemantic{ DxsoUsage::Texcoord, 9 }, spv::BuiltInMax);
 
 		m_vs.out.POINTSIZE = declareIO(false, DxsoSemantic{ DxsoUsage::PointSize, 0 }, spv::BuiltInPointSize);
 
@@ -2612,6 +2617,9 @@ namespace dxvk {
 		declareOverrideShaderIO(true, DxsoSemantic{ DxsoUsage::Color, 1 }, spv::BuiltInMax, false, isgn, osgn, inputMask, outputMask, flatShadingMask);
 		declareOverrideShaderIO(true, DxsoSemantic{ DxsoUsage::Fog, 0 }, spv::BuiltInMax, false, isgn, osgn, inputMask, outputMask, flatShadingMask);
 		declareOverrideShaderIO(true, DxsoSemantic{ DxsoUsage::Normal, 0 }, spv::BuiltInMax, false, isgn, osgn, inputMask, outputMask, flatShadingMask);
+		declareOverrideShaderIO(true, DxsoSemantic{ DxsoUsage::Position, 0 }, spv::BuiltInMax, false, isgn, osgn, inputMask, outputMask, flatShadingMask);
+		// Viewdir
+		declareOverrideShaderIO(true, DxsoSemantic{ DxsoUsage::Texcoord, 8 }, spv::BuiltInMax, false, isgn, osgn, inputMask, outputMask, flatShadingMask);
 		
 		declareOverrideShaderIO(false, DxsoSemantic{ DxsoUsage::Color, 0 }, spv::BuiltInMax, false, isgn, osgn, inputMask, outputMask, flatShadingMask);
 	}
