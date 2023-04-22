@@ -25,8 +25,10 @@
 #define SCLIGHTMAP_BRIGHTNESS 0.3
 // Scenery
 #define NIGHTMAP_BRIGHTNESS 1.2
-#define OVERRIDE_ROUGHNESS 0.5
-#define OVERRIDE_METALLIC 0.
+#define OVERRIDE_ROUGHNESS 0.55
+#define OVERRIDE_METALLIC 0.3
+#define BUMP_MAPPING_STRENGTH 0.9
+#define HQ_BUMP_MAPPING
 
 //#define DEBUG_MATERIAL_TYPE
 //#define DEBUG_LIGHT_DATA
@@ -158,6 +160,20 @@ vec4 debugLightData(vec4 col)
     return col;
 }
 
+// https://blog.selfshadow.com/publications/blending-in-detail/
+vec3 RNMBlendUnpacked(vec3 n1, vec3 n2)
+{
+    n1 += vec3( 0.,  0., 1.);
+    n2 *= vec3(-1., -1., 1.);
+    return n1*dot(n1, n2)/n1.z - n2;
+}
+
+#if defined(TEXTURE_STAGE_1_BOUND) && !defined(TEXTURE_STAGE_1_COLOR_OP_D3DTOP_ADDSMOOTH)
+#define ALBEDO_TEX_SAMPLER s1
+#else
+#define ALBEDO_TEX_SAMPLER s0
+#endif
+
 
 //------------------------------------------------------------------------------
 // BRDF
@@ -211,7 +227,7 @@ float Fd_Lambert() {
 // LIGHTING
 //------------------------------------------------------------------------------
 
-vec3 computeLighting(vec3 baseColor, float roughness, vec3 transmission)
+vec3 computeLighting(vec3 baseColor, float roughness, vec3 transmission, vec3 nrm)
 {
     vec3 lighting = consts.GlobalAmbient.xyz;
     [[unroll]]
@@ -253,6 +269,9 @@ vec3 computeLighting(vec3 baseColor, float roughness, vec3 transmission)
 
         // Much of this is derived from: https://www.shadertoy.com/view/XlKSDR
         vec3 n = normalize(in_Normal0.xyz);
+        #ifdef BUMP_MAPPING_STRENGTH
+        n = RNMBlendUnpacked(n, nrm);
+        #endif
         vec3 v = normalize(in_ViewDir.xyz);
         vec3 h = normalize(l - v);
         float ndotl = saturate(dot(n, l));
@@ -347,11 +366,29 @@ void main()
         transmission = mix(vec3(0.2), vec3(0.2, 0.6, 0.05), 0.5);
     }
 
+    roughness *= 1.-consts.Material_Specular.g*2.;
+
     #if !defined(TEXTURE_STAGE_1_BOUND) && !defined(TEXTURE_STAGE_0_COLOR_ARG2_D3DTA_DIFFUSE)
     // Unlit path, mostly for light flares
     vec3 light = vec3(consts.textureFactor.rgb * FLARE_BRIGHTNESS);
     #else
-    vec3 light = computeLighting(albedo.rgb, roughness, transmission);
+    vec3 nrm = vec3(0., 0., 1.);
+    #ifdef BUMP_MAPPING_STRENGTH
+        #ifdef HQ_BUMP_MAPPING
+        ivec2 texSize = textureSize(ALBEDO_TEX_SAMPLER,0);
+        vec2 eps = vec2(1./float(texSize.x), 0.);
+        float dx = texture(ALBEDO_TEX_SAMPLER, in_Texcoord1.xy + eps).g - texture(ALBEDO_TEX_SAMPLER, in_Texcoord1.xy - eps).g;
+        float dy = texture(ALBEDO_TEX_SAMPLER, in_Texcoord1.xy + eps.yx).g - texture(ALBEDO_TEX_SAMPLER, in_Texcoord1.xy - eps.yx).g;
+        vec2 n = vec2(dx, dy) * BUMP_MAPPING_STRENGTH;
+        #else
+        float lum = dot(albedo.rgb, vec3(0.2126, 0.7152, 0.0722));
+        //float lum = texture(s1, in_Texcoord1.xy).g;
+        vec2 n = vec2(dFdx(lum), dFdy(lum)) * BUMP_MAPPING_STRENGTH;
+        #endif
+        vec2 n2 = n*n;
+        nrm = vec3(n, sqrt(1.-n2.x-n2.y));
+    #endif
+    vec3 light = computeLighting(albedo.rgb, roughness, transmission, nrm);
     #endif
 
     out_Color0 = vec4(light * albedo.rgb + emission, albedo.a);
