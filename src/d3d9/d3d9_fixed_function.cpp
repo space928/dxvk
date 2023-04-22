@@ -685,6 +685,7 @@ namespace dxvk {
 
 		struct {
 			uint32_t POSITION;
+			uint32_t WORLDPOSITION;
 			uint32_t POINTSIZE;
 			uint32_t NORMAL;
 			uint32_t VIEW;
@@ -1101,6 +1102,10 @@ namespace dxvk {
 		}
 
 		m_module.opStore(m_vs.out.POSITION, gl_Position);
+
+		uint32_t worldPos = vtx;
+		//worldPos = emitVectorTimesMatrix(4, 4, vtx, m_vs.constants.inverseView);
+		m_module.opStore(m_vs.out.WORLDPOSITION, worldPos);
 
 		std::array<uint32_t, 4> outNrmIndices;
 		for (uint32_t i = 0; i < 3; i++)
@@ -1731,7 +1736,8 @@ namespace dxvk {
 		if (m_options.invariantPosition)
 			m_module.decorate(m_vs.out.POSITION, spv::DecorationInvariant);
 
-		m_vs.out.VIEW = declareIO(false, DxsoSemantic{ DxsoUsage::Texcoord, 9 }, spv::BuiltInMax);
+		m_vs.out.VIEW = declareIO(false, DxsoSemantic{ DxsoUsage::Position, 1 }, spv::BuiltInMax);
+		m_vs.out.WORLDPOSITION = declareIO(false, DxsoSemantic{ DxsoUsage::Position, 2 }, spv::BuiltInMax);
 
 		m_vs.out.POINTSIZE = declareIO(false, DxsoSemantic{ DxsoUsage::PointSize, 0 }, spv::BuiltInPointSize);
 
@@ -2604,7 +2610,7 @@ namespace dxvk {
 	void generateOverrideShaderIsgn(DxsoIsgn& isgn, DxsoIsgn& osgn,
 		uint32_t& inputMask, uint32_t& outputMask, uint32_t& flatShadingMask)
 	{
-		// declareOverrideShaderIO(true, DxsoSemantic{ DxsoUsage::Position, 0 }, spv::BuiltInFragCoord, false, isgn, osgn, inputMask, outputMask, flatShadingMask);
+		declareOverrideShaderIO(true, DxsoSemantic{ DxsoUsage::Position, 0 }, spv::BuiltInFragCoord, false, isgn, osgn, inputMask, outputMask, flatShadingMask);
 		declareOverrideShaderIO(true, DxsoSemantic{ DxsoUsage::Texcoord, 0 }, spv::BuiltInMax, false, isgn, osgn, inputMask, outputMask, flatShadingMask);
 		declareOverrideShaderIO(true, DxsoSemantic{ DxsoUsage::Texcoord, 1 }, spv::BuiltInMax, false, isgn, osgn, inputMask, outputMask, flatShadingMask);
 		declareOverrideShaderIO(true, DxsoSemantic{ DxsoUsage::Texcoord, 2 }, spv::BuiltInMax, false, isgn, osgn, inputMask, outputMask, flatShadingMask);
@@ -2617,10 +2623,11 @@ namespace dxvk {
 		declareOverrideShaderIO(true, DxsoSemantic{ DxsoUsage::Color, 1 }, spv::BuiltInMax, false, isgn, osgn, inputMask, outputMask, flatShadingMask);
 		declareOverrideShaderIO(true, DxsoSemantic{ DxsoUsage::Fog, 0 }, spv::BuiltInMax, false, isgn, osgn, inputMask, outputMask, flatShadingMask);
 		declareOverrideShaderIO(true, DxsoSemantic{ DxsoUsage::Normal, 0 }, spv::BuiltInMax, false, isgn, osgn, inputMask, outputMask, flatShadingMask);
-		declareOverrideShaderIO(true, DxsoSemantic{ DxsoUsage::Position, 0 }, spv::BuiltInMax, false, isgn, osgn, inputMask, outputMask, flatShadingMask);
 		// Viewdir
-		declareOverrideShaderIO(true, DxsoSemantic{ DxsoUsage::Texcoord, 8 }, spv::BuiltInMax, false, isgn, osgn, inputMask, outputMask, flatShadingMask);
-		
+		declareOverrideShaderIO(true, DxsoSemantic{ DxsoUsage::Position, 1 }, spv::BuiltInMax, false, isgn, osgn, inputMask, outputMask, flatShadingMask);
+		// Worldpos
+		declareOverrideShaderIO(true, DxsoSemantic{ DxsoUsage::Position, 2 }, spv::BuiltInMax, false, isgn, osgn, inputMask, outputMask, flatShadingMask);
+
 		declareOverrideShaderIO(false, DxsoSemantic{ DxsoUsage::Color, 0 }, spv::BuiltInMax, false, isgn, osgn, inputMask, outputMask, flatShadingMask);
 	}
 
@@ -2646,6 +2653,7 @@ namespace dxvk {
 				shaderDefines.push_back("SPECULAR_ENABLE");
 			if (Key.Stages[0].Contents.GlobalAlphaTestEnable != 0)
 				shaderDefines.push_back("ALPHA_TEST");
+			shaderDefines.push_back(str::format("MAX_LIGHTS ", Key.Stages[0].Contents.LightCount));
 
 			for (int i = 0; i < caps::TextureStageCount; i++)
 			{

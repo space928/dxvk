@@ -30,6 +30,8 @@
 #include "d3d9_spec_constants.h"
 #include "d3d9_interop.h"
 
+#include "filewatch/FileWatch.hpp"
+
 #include <unordered_set>
 #include <vector>
 #include <type_traits>
@@ -1163,7 +1165,7 @@ namespace dxvk {
 
     uint64_t GetCurrentSequenceNumber();
 
-    FileWatcher* m_fileWatcher;
+    filewatch::FileWatch<std::string>* m_fileWatcher;
     std::thread m_fileWatcherThread;
 
     Com<D3D9InterfaceEx>            m_parent;

@@ -3,8 +3,6 @@
  * Copyright Thomas Mathieson (c) 2023
  */
 
-#define MAX_LIGHTS 8
-
 struct light_t {
     vec4 Diffuse;
     vec4 Specular;
@@ -25,14 +23,7 @@ layout(set = 1, binding = 0) uniform D3D9FixedFunctionPS
 {
     vec4 textureFactor;
     vec4 GlobalAmbient;
-    light_t[MAX_LIGHTS] Lights;
-    // light_t Light1;
-    // light_t Light2;
-    // light_t Light3;
-    // light_t Light4;
-    // light_t Light5;
-    // light_t Light6;
-    // light_t Light7;
+    light_t[8] Lights;
     vec4 Material_Diffuse;
     vec4 Material_Ambient;
     vec4 Material_Specular;
@@ -57,7 +48,7 @@ layout(set = 1, binding = 1, std140) uniform D3D9SharedPS
 
 // These have some handy state variables in them, but at the moment accessing them seems to result in a crash,
 // I guess the buffer isn't being bound correctly
-layout(set = 2, binding = 1) uniform spec_state_t
+/*layout(set = 2, binding = 1) uniform spec_state_t
 {
     uint dword0;
     uint dword1;
@@ -73,7 +64,7 @@ layout(set = 2, binding = 1) uniform spec_state_t
     uint dword11;
     uint dword12;
     uint dword13;
-} spec_state;
+} spec_state;*/
 
 layout(push_constant) uniform render_state_t
 {
@@ -91,19 +82,19 @@ layout(push_constant) uniform render_state_t
 } render_state;
 
 layout(location = 0) in vec4 in_ViewDir;
-layout(location = 1) in vec4 in_Normal0;
-layout(location = 2) in vec4 in_Texcoord0;
-layout(location = 3) in vec4 in_Texcoord1;
-layout(location = 4) in vec4 in_Texcoord2;
-layout(location = 5) in vec4 in_Texcoord3;
-layout(location = 6) in vec4 in_Texcoord4;
-layout(location = 7) in vec4 in_Texcoord5;
-layout(location = 8) in vec4 in_Texcoord6;
-layout(location = 9) in vec4 in_Texcoord7;
-layout(location = 10) in vec4 in_Color0;
-layout(location = 11) in vec4 in_Color1;
-layout(location = 12) in float in_Fog0;
-// layout(location = 12) in vec4 in_Position0;
+layout(location = 1) in vec4 in_Position0;
+layout(location = 2) in vec4 in_Normal0;
+layout(location = 3) in vec4 in_Texcoord0;
+layout(location = 4) in vec4 in_Texcoord1;
+layout(location = 5) in vec4 in_Texcoord2;
+layout(location = 6) in vec4 in_Texcoord3;
+layout(location = 7) in vec4 in_Texcoord4;
+layout(location = 8) in vec4 in_Texcoord5;
+layout(location = 9) in vec4 in_Texcoord6;
+layout(location = 10) in vec4 in_Texcoord7;
+layout(location = 11) in vec4 in_Color0;
+layout(location = 12) in vec4 in_Color1;
+layout(location = 13) in float in_Fog0;
 layout(location = 0) out vec4 out_Color0;
 
 layout(set = 0, binding = 0) uniform sampler2D s0;
@@ -122,28 +113,3 @@ bool isAlphaTestEnabled()
     // That being said, it generally works...
     return render_state.alpha_ref > 8; //(spec_state.dword1 & 0x700000) != 0x400000;
 }
-
-/*light_t getLight(int i)
-{
-    switch(i)
-    {
-        case 0:
-            return consts.Light0;
-        case 1:
-            return consts.Light1;
-        case 2:
-            return consts.Light2;
-        case 3:
-            return consts.Light3;
-        case 4:
-            return consts.Light4;
-        case 5:
-            return consts.Light5;
-        case 6:
-            return consts.Light6;
-        case 7:
-            return consts.Light7;
-        default:
-            return (light_t)0.;
-    }
-}*/

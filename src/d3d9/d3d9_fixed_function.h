@@ -174,6 +174,7 @@ namespace dxvk {
         uint32_t     GlobalSpecularEnable : 1;
         uint32_t     GlobalLightingEnable : 1;
         uint32_t     GlobalAlphaTestEnable : 1;
+        uint32_t     LightCount : 4;
       } Contents;
 
       uint32_t Primitive[2];

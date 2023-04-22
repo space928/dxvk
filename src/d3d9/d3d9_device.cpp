@@ -25,6 +25,8 @@
 
 #include "d3d9_initializer.h"
 
+#include "filewatch/FileWatch.hpp"
+
 #include <algorithm>
 #include <cfloat>
 #ifdef MSC_VER
@@ -68,7 +70,20 @@ namespace dxvk {
     // Setup file watcher for automatic shader reloading
     if (m_d3d9Options.autoReloadOverrideShaders)
     {
-        m_fileWatcher = new FileWatcher(m_d3d9Options.overrideFFShaderPath, std::chrono::milliseconds(1000));
+        m_fileWatcher = new filewatch::FileWatch<std::string> (
+            m_d3d9Options.overrideFFShaderPath,
+            [this](const std::string& path, const filewatch::Event change_type) {
+                if (change_type == filewatch::Event::modified) {
+                    Logger::warn("FF override shader has been modified! Reloading shaders...");
+                    // Race condition? Maybe we should add a lock...
+                    m_ffModules.ClearFSShaders();
+
+                    m_flags.set(D3D9DeviceFlag::DirtyFFPixelShader);
+                }
+            }
+        );
+
+        /*m_fileWatcher = new FileWatcher(m_d3d9Options.overrideFFShaderPath, std::chrono::milliseconds(1000));
         //m_fileWatcher.delay = 1000;
         //m_fileWatcher.path_to_watch = m_d3d9Options.overrideFFShaderPath;
         m_fileWatcherThread = std::thread([this]() {m_fileWatcher->start([this](std::string path_to_watch, FileStatus status) -> void {
@@ -84,7 +99,7 @@ namespace dxvk {
 
                 m_flags.set(D3D9DeviceFlag::DirtyFFPixelShader);
             }
-        }); });
+        }); });*/
     }
 
     if (m_dxvkDevice->instance()->extensions().extDebugUtils)
@@ -6918,6 +6933,17 @@ namespace dxvk {
       stage0.GlobalSpecularEnable = m_state.renderStates[D3DRS_SPECULARENABLE];
       stage0.GlobalLightingEnable = m_state.renderStates[D3DRS_LIGHTING];
       stage0.GlobalAlphaTestEnable = m_state.renderStates[D3DRS_ALPHATESTENABLE];// | (m_state.renderStates[D3DRS_ALPHAFUNC] - D3DCMPFUNC::D3DCMP_ALWAYS);
+
+      uint32_t lightCount = 0;
+
+      if (stage0.GlobalLightingEnable) {
+          for (uint32_t i = 0; i < caps::MaxEnabledLights; i++) {
+              if (m_state.enabledLightIndices[i] != UINT32_MAX)
+                  lightCount++;
+          }
+      }
+
+      stage0.LightCount = lightCount;
 
       // The last stage *always* writes to current.
       if (idx >= 1)

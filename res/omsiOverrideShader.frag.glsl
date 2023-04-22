@@ -14,12 +14,22 @@
 //------------------------------------------------------------------------------
 
 // Limit the number of per-pixel lights to 4 for performance
-#define OVERRIDE_MAX_LIGHTS 4
+#define OVERRIDE_MAX_LIGHTS 8
 // For fake HDR-iness we extend the range of the lights
 #define LIGHT_POWER 2.5
 #define LIGHT_SCALE 1.6
+#define FLARE_BRIGHTNESS 1.3
+#define SPOTLIGHT_SCALE 3.0
+// Terrain
+#define LIGHTMAP_BRIGHTNESS 1.0
+#define SCLIGHTMAP_BRIGHTNESS 0.3
+// Scenery
+#define NIGHTMAP_BRIGHTNESS 1.2
 #define OVERRIDE_ROUGHNESS 0.5
 #define OVERRIDE_METALLIC 0.
+
+//#define DEBUG_MATERIAL_TYPE
+//#define DEBUG_LIGHT_DATA
 
 #include "D3D9_ShaderConsts.glsl"
 
@@ -30,6 +40,7 @@
 
 #define saturate(x) clamp(x, 0., 1.)
 #define PI 3.14159265
+#define N_LIGHTS min(OVERRIDE_MAX_LIGHTS, MAX_LIGHTS)
 
 // https://www.shadertoy.com/view/ldtcW2
 const float kShoulderStrength = 0.32;
@@ -43,6 +54,110 @@ vec3 filmicToneMapping(in vec3 color)
 	return ((color*(kShoulderStrength*color+kLinearAngle*kLinearStrength)+kToeStrength*kToeNumerator) /
  			(color*(kShoulderStrength*color+kLinearStrength)+kToeStrength*kToeDenominator))-kToeNumerator/kToeDenominator;
 }
+
+vec4 debugShaderType(vec3 albedo, vec2 uv)
+{
+    albedo = vec3(0., 0., 0.5);
+    #if defined(TEXTURE_STAGE_3_BOUND)
+        albedo.r = 1.;
+    #elif defined(TEXTURE_STAGE_2_BOUND)
+        albedo.r = 0.67;
+    #elif defined(TEXTURE_STAGE_1_BOUND)
+        albedo.r = 0.33;
+        #if defined(TEXTURE_STAGE_1_COLOR_OP_D3DTOP_LERP)
+            albedo.g = 1.;
+        #elif defined(TEXTURE_STAGE_1_COLOR_OP_D3DTOP_MODULATE)
+            albedo.g = 0.75;
+        #elif defined(TEXTURE_STAGE_1_COLOR_OP_D3DTOP_SELECTARG1)
+            albedo.g = 0.5;
+        #elif defined(TEXTURE_STAGE_1_COLOR_OP_D3DTOP_BLENDCURRENTALPHA)
+            albedo.g = 0.1;
+        #elif defined(TEXTURE_STAGE_1_COLOR_OP_D3DTOP_ADDSMOOTH)
+            albedo.g = 0.2;
+        #endif
+    #else
+        albedo.r = 0.;
+    #endif
+
+    #if defined(TEXTURE_STAGE_0_ALPHA_OP_D3DTOP_DISABLE) || defined(TEXTURE_STAGE_1_ALPHA_OP_D3DTOP_DISABLE) || defined(TEXTURE_STAGE_2_ALPHA_OP_D3DTOP_DISABLE) || defined(TEXTURE_STAGE_3_ALPHA_OP_D3DTOP_DISABLE)
+        albedo *= fract(uv.x*5.);
+    #elif defined(TEXTURE_STAGE_0_ALPHA_OP_D3DTOP_MODULATE) || defined(TEXTURE_STAGE_1_ALPHA_OP_D3DTOP_MODULATE) || defined(TEXTURE_STAGE_2_ALPHA_OP_D3DTOP_MODULATE)
+        albedo *= fract((uv.x+uv.y)*1.);
+        #ifdef TEXTURE_STAGE_0_ALPHA_ARG2_D3DTA_CONSTANT
+        albedo *= fract((uv.x)*7.);
+        #endif
+    #endif
+
+    return vec4(albedo, 1.);
+}
+
+vec3 dbgTypeToCol(uint type)
+{
+    switch(type)
+    {
+        case 0:
+            return vec3(0.2,0.,0.);
+        case 1:
+            return vec3(1.,0.,0.);
+        case 2:
+            return vec3(0.,1.,0.);
+        case 3:
+            return vec3(0.,0.,1.);
+        default:
+            return vec3(1.);
+    }
+}
+
+vec4 debugLightData(vec4 col)
+{
+    vec3 dl = (consts.Lights[2].Position - in_Position0).xyz;
+    float dist = length(dl);
+    //col.rgb = vec3(consts.Lights[2].Diffuse.r, step(dist, consts.Lights[2].Range), consts.Lights[2].Diffuse.r);
+    vec2 uv = (in_Position0.xy/in_Position0.z+0.3)*1.5;
+    uv.x += 0.6;
+    if(uv.x > 1.)
+        return col;
+    col.rgb = vec3(fract(uv*10.), 1.);
+    for(int i = 0; i < 8; i++)
+    {
+        if (uv.x < 0. || uv.y < 0. || uv.x > 1. || uv.y > 1.)
+            break;
+        if(uv.x > float(i)/10.)
+        {
+            if(uv.y < 0.1)
+                col.rgb = consts.Lights[i].Diffuse.rgb;
+            else if(uv.y < 0.2)
+                col.rgb = consts.Lights[i].Specular.rgb;
+            else if(uv.y < 0.3)
+                col.rgb = consts.Lights[i].Ambient.rgb;
+            else if(uv.y < 0.4)
+                col.rgb = fract(consts.Lights[i].Position.rgb);
+            else if(uv.y < 0.5)
+                col.rgb = consts.Lights[i].Direction.rgb;
+            else if(uv.y < 0.6)
+                col.rgb = dbgTypeToCol(consts.Lights[i].Type);
+            else if(uv.y < 0.7)
+                col.rgb = vec3(consts.Lights[i].Range/100., fract(consts.Lights[i].Range/10.), fract(consts.Lights[i].Range));
+            else if(uv.y < 0.8)
+                col.rgb = vec3(consts.Lights[i].Falloff/100., fract(consts.Lights[i].Falloff/10.), fract(consts.Lights[i].Falloff));
+            else if(uv.y < 0.9)
+                col.rgb = vec3(consts.Lights[i].Attenuation0, fract(consts.Lights[i].Attenuation1), fract(consts.Lights[i].Attenuation2));
+            else if(uv.y < 1.)
+                col.rgb = vec3(float(i)/8.);
+
+            if(i > N_LIGHTS)
+                col.rgb = mix(vec3(0.), vec3(0.,1.,1.), step(fract(uv.x*80. - uv.y*80.), 0.5));
+        }
+    }
+
+    col.rgb = mix(col.rgb, vec3(0.5), step(fract(uv.x*10.), 0.06));
+    col.rgb = mix(col.rgb, vec3(0.5), step(fract(uv.y*10.), 0.06));
+    if(isnan(col.r))
+        col.rgb = mix(vec3(0.), vec3(1.,1.,0.), step(fract(uv.x*80. + uv.y*80.), 0.5));
+
+    return col;
+}
+
 
 //------------------------------------------------------------------------------
 // BRDF
@@ -100,11 +215,44 @@ vec3 computeLighting(vec3 baseColor, float roughness, vec3 transmission)
 {
     vec3 lighting = consts.GlobalAmbient.xyz;
     [[unroll]]
-    for(int i = 0; i < OVERRIDE_MAX_LIGHTS; i++)
+    for(int i = 0; i < N_LIGHTS; i++)
     {
+        if(consts.Lights[i].Type == 0)
+            break;
+
+        vec3 l = -consts.Lights[i].Direction.xyz;
+        float atten = 1.;
+        switch(consts.Lights[i].Type)
+        {
+            case 1:
+                // Point light
+                l = (consts.Lights[i].Position - in_Position0).xyz;
+                float dist = length(l);
+                l = normalize(l);
+                if(dist >= consts.Lights[i].Range)
+                    continue;
+                atten = 1./(consts.Lights[i].Attenuation0 + consts.Lights[i].Attenuation1 * dist + consts.Lights[i].Attenuation2 * dist * dist);
+                break;
+            case 2:
+                // Spot light
+                l = (consts.Lights[i].Position - in_Position0).xyz;
+                dist = length(l);
+                l = normalize(l);
+                if(dist >= consts.Lights[i].Range)
+                    continue;
+                atten = 1./(consts.Lights[i].Attenuation0 + consts.Lights[i].Attenuation1 * dist + consts.Lights[i].Attenuation2 * dist * dist);
+                // Penumbra
+                atten *= 1.-smoothstep(consts.Lights[i].Theta, consts.Lights[i].Phi, dot(l, -consts.Lights[i].Direction.xyz));
+                atten *= SPOTLIGHT_SCALE;
+                break;
+            case 3:
+                // Directional light
+                l = -consts.Lights[i].Direction.xyz;
+                break;
+        }
+
         // Much of this is derived from: https://www.shadertoy.com/view/XlKSDR
         vec3 n = normalize(in_Normal0.xyz);
-        vec3 l = -consts.Lights[i].Direction.xyz;
         vec3 v = normalize(in_ViewDir.xyz);
         vec3 h = normalize(l - v);
         float ndotl = saturate(dot(n, l));
@@ -129,7 +277,7 @@ vec3 computeLighting(vec3 baseColor, float roughness, vec3 transmission)
 
         vec3 Ft = transmission * pow(saturate((-dot(n, l))*0.5+0.5), 0.7);
 
-        lighting += ((Fd + Fr) * ndotl + Ft) * pow(consts.Lights[i].Diffuse.xyz * LIGHT_SCALE, vec3(LIGHT_POWER)) + consts.Lights[i].Ambient.xyz;
+        lighting += ((Fd + Fr) * ndotl + Ft) * atten * pow(consts.Lights[i].Diffuse.xyz * LIGHT_SCALE, vec3(LIGHT_POWER)) + consts.Lights[i].Ambient.xyz * atten;
     }
 
     return lighting;
@@ -142,10 +290,13 @@ vec3 computeLighting(vec3 baseColor, float roughness, vec3 transmission)
 
 void main()
 {
-    vec4 mainTex = texture(s0, in_Texcoord0.xy);
-    float roughness = mainTex.a * OVERRIDE_ROUGHNESS;
+    vec4 albedo = texture(s0, in_Texcoord0.xy);
+    vec3 emission = vec3(0.);
+    float roughness = albedo.a * OVERRIDE_ROUGHNESS;
     vec3 transmission = vec3(0.);
 
+    /////
+    // Terrain tile
     #ifdef TEXTURE_STAGE_2_BOUND
     // Make some assumptions here that we must be rendering a terrain tile
     vec4 diffuse = texture(s1, in_Texcoord1.xy);
@@ -155,27 +306,40 @@ void main()
 
     #ifdef TEXTURE_STAGE_0_COLOR_OP_D3DTOP_ADDSMOOTH
         // At night time, add the nightmap...
-        mainTex += diffuse * diffuse1;
+        emission = albedo.rgb * LIGHTMAP_BRIGHTNESS;
+        albedo = diffuse * diffuse1;
+        emission *= albedo.rgb;
     #else
-        mainTex = diffuse * diffuse1;
+        albedo = diffuse * diffuse1;
     #endif
     #endif
+    /////
 
+    /////
+    // Nightmap/lightmapped
     #if defined(TEXTURE_STAGE_1_BOUND) && !defined(TEXTURE_STAGE_2_BOUND)
         vec4 diffuse = texture(s1, in_Texcoord1.xy);
         #if defined(TEXTURE_STAGE_1_COLOR_OP_D3DTOP_ADDSMOOTH)
-            // Treat mainTex as a nightMap/lightMap and diffuse as the main texture
-            mainTex += diffuse;
+            // Treat albedo as a nightMap/lightMap and diffuse as the main texture
+            emission = diffuse.rgb * NIGHTMAP_BRIGHTNESS;
         #elif defined(TEXTURE_STAGE_1_COLOR_OP_D3DTOP_LERP)
-            // Blend between mainTex and diffuse by the texture factor, dirtmaps?
-            mainTex = mix(mainTex, diffuse, consts.textureFactor);
+            // Blend between albedo and diffuse by the texture factor, dirtmaps?
+            albedo = mix(albedo, diffuse, consts.textureFactor);
+        #elif defined(TEXTURE_STAGE_1_COLOR_OP_D3DTOP_BLENDCURRENTALPHA)
+            albedo = vec4(1.,0.,0.,1.);
+        #elif defined(TEXTURE_STAGE_1_COLOR_OP_D3DTOP_SELECTARG1)
+            albedo = vec4(0.,1.,0.,1.);
+        #elif defined(TEXTURE_STAGE_1_COLOR_OP_D3DTOP_MODULATE)
+            emission = albedo.rgb * SCLIGHTMAP_BRIGHTNESS;
+            albedo = diffuse;//vec4(0.,0.,1.,1.);
         #else
             // Multiply
             roughness = diffuse.r * OVERRIDE_ROUGHNESS;
-            mainTex *= diffuse;
+            albedo *= diffuse;
         #endif
-        mainTex.a = diffuse.a;
+        albedo.a = diffuse.a;
     #endif
+    /////
 
     if(isAlphaTestEnabled()) 
     {
@@ -183,26 +347,36 @@ void main()
         transmission = mix(vec3(0.2), vec3(0.2, 0.6, 0.05), 0.5);
     }
 
-    vec3 light = computeLighting(mainTex.rgb, roughness, transmission);
-
-    #if defined(TEXTURE_STAGE_0_COLOR_OP_D3DTOP_ADDSMOOTH)
-        // Treat mainTex as an emmissive texture
-        //out_Color0 = vec4(light + mainTex.rgb, 1.0);
-        // This seems to make things worse at the moment...
-        out_Color0 = vec4(light * mainTex.rgb, 1.0);
+    #if !defined(TEXTURE_STAGE_1_BOUND) && !defined(TEXTURE_STAGE_0_COLOR_ARG2_D3DTA_DIFFUSE)
+    // Unlit path, mostly for light flares
+    vec3 light = vec3(consts.textureFactor.rgb * FLARE_BRIGHTNESS);
     #else
-        out_Color0 = vec4(light * mainTex.rgb, 1.0);
+    vec3 light = computeLighting(albedo.rgb, roughness, transmission);
     #endif
+
+    out_Color0 = vec4(light * albedo.rgb + emission, albedo.a);
 
     // Tonemap for that fake HDR <3
     out_Color0.rgb = filmicToneMapping(pow(out_Color0.rgb, vec3(1.5))) * 1.2;
+    //out_Color0.rgb = fract(in_Position0.xyz);
+    #ifdef DEBUG_MATERIAL_TYPE
+    out_Color0 = debugShaderType(albedo.rgb, in_Texcoord0.xy);
+    #endif
 
-    out_Color0.a = in_Color0.a * mainTex.a;
+    #ifdef DEBUG_LIGHT_DATA
+    out_Color0 = debugLightData(out_Color0);
+    #endif
 
+    /////
+    // Handle alpha
     #ifdef TEXTURE_STAGE_3_BOUND
     // Assume we're doing an additional terrain layer which needs blending
     vec4 alpha = texture(s3, in_Texcoord3.xy);
     out_Color0.a = alpha.a;
+    #endif
+
+    #ifdef TEXTURE_STAGE_0_ALPHA_ARG2_D3DTA_CONSTANT
+    out_Color0.a *= consts.Material_Diffuse.a;
     #endif
 
     // The ALPHA_TEST flag is currently buggy
@@ -210,4 +384,5 @@ void main()
     if(isAlphaTestEnabled() && out_Color0.a < 0.5)
         discard;
     //#endif
+    /////
 }
